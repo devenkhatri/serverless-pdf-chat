@@ -25,22 +25,29 @@ s3 = boto3.client("s3")
 logger = Logger()
 
 def get_bedrock_client(region):
-    bedrock_client = boto3.client("bedrock-runtime", region_name=region)
-    return bedrock_client
+    # bedrock_client = boto3.client("bedrock-runtime", region_name=region)
+    # return bedrock_client
+    return boto3.client("bedrock-runtime", region_name=region)
     
 def create_langchain_vector_embedding_using_bedrock(bedrock_client, bedrock_embedding_model_id):
-    bedrock_embeddings_client = BedrockEmbeddings(
-        client=bedrock_client,
-        model_id=bedrock_embedding_model_id)
-    return bedrock_embeddings_client
+    # bedrock_embeddings_client = BedrockEmbeddings(
+    #     client=bedrock_client,
+    #     model_id=bedrock_embedding_model_id)
+    # return bedrock_embeddings_client
+    return BedrockEmbeddings(client=bedrock_client,model_id=bedrock_embedding_model_id)
     
 def create_bedrock_llm(bedrock_client, model_version_id):
-    bedrock_llm = BedrockChat(
+    # bedrock_llm = BedrockChat(
+    #     model_id=model_version_id, 
+    #     client=bedrock_client,
+    #     model_kwargs={'temperature': 0}
+    #     )
+    # return bedrock_llm
+    return BedrockChat(
         model_id=model_version_id, 
-        client=bedrock_client,
-        model_kwargs={'temperature': 0}
+         client=bedrock_client,
+         model_kwargs={'temperature': 0}
         )
-    return bedrock_llm
 
 
 @logger.inject_lambda_context(log_event=True)
@@ -79,7 +86,9 @@ def lambda_handler(event, context):
     
     # Creating all clients for chain
     bedrock_client = get_bedrock_client(region)
+    logger.info("*********** 48")
     bedrock_llm = create_bedrock_llm(bedrock_client, bedrock_model_id)
+    logger.info("*********** 49")
     bedrock_embeddings_client = create_langchain_vector_embedding_using_bedrock(bedrock_client, bedrock_embedding_model_id)
     
     logger.info("*********** 59")
@@ -149,6 +158,7 @@ def lambda_handler(event, context):
     logger.info("*********** 82")
     
     # LangChain prompt template
+    
     prompt = ChatPromptTemplate.from_template("""System: The following is a friendly conversation between a knowledgeable helpful assistant and a customer.
     The assistant is talkative and provides lots of specific details from it's context.
 
@@ -169,20 +179,32 @@ def lambda_handler(event, context):
     
     logger.info(f"Invoking the chain with similarity using FAISS, Bedrock FM {bedrock_model_id}, and Bedrock embeddings with {bedrock_embedding_model_id}")
     logger.info("*********** 86")
-    # response = retrieval_chain.invoke({"context":message_history,"input": human_input})
-    response = retrieval_chain.invoke(
-        {"context":message_history,"input": "what is the name of the medicine?"},
-        config={
-            "configurable": {"session_id": "abc123"}
-        },  # constructs a key "abc123" in `store`.
-    )
-
-    logger.info("*********** 87")
+    response = retrieval_chain.invoke({
+    "context":message_history,
+    "input": "What is REACT in machine learning meaning?",
+    "config":{"session_id": "abc123"}
+    })
+    
+    # a,response = retrieval_chain.invoke(
+    # a,response = retrieval_chain.invoke({
+    #     "context": message_history,
+    #     "input": human_input,
+    #     })
+        # {"context":message_history, "input": "what is the name of the medicine?"},
+        # config={
+        #     "configurable": {"session_id": "abc123"}
+        # },  # constructs a key "abc123" in `store`.
+    
+    # response = retrieval_chain.invoke(
+    #     {"input": "What is REACT in machine learning meaning?", "config" : {"session_id": "abc123"}}
+    # )
+    logger.info(f"*********** 87 {response}")
+    # logger.info(f"*********** 87.1 {a}")
     logger.info("These are the similar documents from FAISS based on the provided query:")
     source_documents = response.get('context')
     logger.info("*********** 88")
     for d in source_documents:
-        print("")
+        # print("")
         logger.info(f"Text: {d.page_content}")
     
     logger.info("*********** 89")
