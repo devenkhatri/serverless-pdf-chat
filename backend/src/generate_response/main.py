@@ -1,52 +1,47 @@
-import os, json
+import os
+import json
 import boto3
 from aws_lambda_powertools import Logger
-from langchain.llms.bedrock import Bedrock
+from langchain_community.chat_models import BedrockChat
 from langchain.memory.chat_message_histories import DynamoDBChatMessageHistory
 from langchain.memory import ConversationBufferMemory
 from langchain.embeddings import BedrockEmbeddings
 from langchain.vectorstores import FAISS
 from langchain.chains import ConversationalRetrievalChain
-
-
+ 
+ 
 MEMORY_TABLE = os.environ["MEMORY_TABLE"]
 BUCKET = os.environ["BUCKET"]
-
-
+MODEL_ID = "amazon.titan-embed-text-v1"
+ 
 s3 = boto3.client("s3")
 logger = Logger()
-
-
-@logger.inject_lambda_context(log_event=True)
-def lambda_handler(event, context):
-    event_body = json.loads(event["body"])
-    file_name = event_body["fileName"]
-    human_input = event_body["prompt"]
-    conversation_id = event["pathParameters"]["conversationid"]
-
-    user = event["requestContext"]["authorizer"]["claims"]["sub"]
-
-    s3.download_file(BUCKET, f"{user}/{file_name}/index.faiss", "/tmp/index.faiss")
-    s3.download_file(BUCKET, f"{user}/{file_name}/index.pkl", "/tmp/index.pkl")
-
+ 
+ 
+def get_embeddings():
     bedrock_runtime = boto3.client(
         service_name="bedrock-runtime",
         region_name="us-east-1",
     )
-
-    embeddings, llm = BedrockEmbeddings(
+ 
+    embeddings = BedrockEmbeddings(
         model_id="amazon.titan-embed-text-v1",
         client=bedrock_runtime,
         region_name="us-east-1",
-    ), Bedrock(
-        model_id="anthropic.claude-v2", client=bedrock_runtime, region_name="us-east-1"
     )
-    faiss_index = FAISS.load_local("/tmp", embeddings)
-
+    return embeddings
+ 
+def get_faiss_index(embeddings, user, file_name):
+    s3.download_file(BUCKET, f"{user}/{file_name}/index.faiss", "/tmp/index.faiss")
+    s3.download_file(BUCKET, f"{user}/{file_name}/index.pkl", "/tmp/index.pkl")
+    faiss_index = FAISS.load_local("/tmp", embeddings, allow_dangerous_deserialization=True)
+    return faiss_index
+ 
+def create_memory(conversation_id):
     message_history = DynamoDBChatMessageHistory(
         table_name=MEMORY_TABLE, session_id=conversation_id
     )
-
+ 
     memory = ConversationBufferMemory(
         memory_key="chat_history",
         chat_memory=message_history,
@@ -54,18 +49,62 @@ def lambda_handler(event, context):
         output_key="answer",
         return_messages=True,
     )
-
-    qa = ConversationalRetrievalChain.from_llm(
-        llm=llm,
+    return memory
+ 
+def bedrock_chain(faiss_index, memory, human_input, bedrock_runtime):
+ 
+    chat = BedrockChat(
+        model_id=MODEL_ID,
+        model_kwargs={'temperature': 0.0}
+    )
+ 
+    chain = ConversationalRetrievalChain.from_llm(
+        llm=chat,
+        chain_type="stuff",
         retriever=faiss_index.as_retriever(),
         memory=memory,
         return_source_documents=True,
     )
-
-    res = qa({"question": human_input})
-
-    logger.info(res)
-
+ 
+    response = chain.invoke({"question": human_input})
+ 
+    return response
+ 
+@logger.inject_lambda_context(log_event=True)
+def lambda_handler(event, context):
+    logger.info("*********** 31")
+    event_body = json.loads(event["body"])
+    logger.info("*********** 32")
+    file_name = event_body["fileName"]
+    logger.info("*********** 33")
+    human_input = event_body["prompt"]
+    logger.info("*********** 34")
+    conversation_id = event["pathParameters"]["conversationid"]
+    logger.info("*********** 35")
+    user = event["requestContext"]["authorizer"]["claims"]["sub"]
+    logger.info("*********** 36")
+ 
+    embeddings = get_embeddings()
+    logger.info("*********** 37")
+    faiss_index = get_faiss_index(embeddings, user, file_name)
+    logger.info("*********** 38")
+    memory = create_memory(conversation_id)
+    logger.info("*********** 39")
+    bedrock_runtime = boto3.client(
+        service_name="bedrock-runtime",
+        region_name="us-east-1",
+    )
+    logger.info("*********** 40")
+ 
+    response = bedrock_chain(faiss_index, memory, human_input, bedrock_runtime)
+    logger.info("*********** 41")
+    if response:
+        print(f"{MODEL_ID} -\nPrompt: {human_input}\n\nResponse: {response['answer']}")
+    else:
+        raise ValueError(f"Unsupported model ID: {MODEL_ID}")
+ 
+    logger.info(str(response['answer']))
+ 
     return {
         "statusCode": 200,
         "headers": {
@@ -74,5 +113,6 @@ def lambda_handler(event, context):
             "Access-Control-Allow-Origin": "*",
             "Access-Control-Allow-Methods": "*",
         },
-        "body": json.dumps(res["answer"]),
+        "body": json.dumps(response['answer']),
     }
+ 

@@ -1,3 +1,15 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+
+.amplify-button--primary {
+  background-color: rgb(76 29 149/0.8) !important;
+}
+
+.amplify-button.amplify-field-group__control.amplify-button--link.amplify-button--small {
+    color: rgb(76 29 149/0.8) !important;
+    &:hover {
+        background-color: rgb(76 29 149/0.1) !important;
+    }
+}

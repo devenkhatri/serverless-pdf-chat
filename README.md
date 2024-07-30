@@ -213,6 +213,30 @@ AWS SAM will now deploy the React frontend with Amplify Hosting. Navigate to the
 
 If you are experiencing issues when running the [`sam build`](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-cli-command-reference-sam-build.html) command, try setting the `--use-container` flag (requires Docker):
 
+**SOLUTION for Error: "AccessDeniedException: An error occurred (AccessDeniedException) when calling the InvokeModel operation: User: <> is not authorized to perform: bedrock:InvokeModel on resource: <> because no identity-based policy allows the bedrock:InvokeModel action."
+These errors indicate that the IAM user or role that tried to invoke the API lacks the required permissions.**
+
+To resolve the error, verify that the following conditions are met:
+
+The IAM user or role that's used to invoke this API has the necessary ALLOW action as shown below. For more information, see How Amazon Bedrock works with IAM.
+
+```bash
+{
+	"Version": "2012-10-17",
+	"Statement": {
+		"Sid": "AllowInference",
+		"Effect": "Allow",
+		"Action": [
+			"bedrock:InvokeModel",
+			"bedrock:InvokeModelWithResponseStream"
+		],
+		"Resource": "arn:aws:bedrock:*::foundation-model/amazon.titan-embed-text-v1"
+	}
+}
+```
+
+Also add above policy to **"serverless-pdf-chat-GenerateResponseFunctionRole"** role
+
 ```bash
 sam build --use-container
 ```
@@ -253,3 +277,5 @@ See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more inform
 ## License
 
 This library is licensed under the MIT-0 License. See the [LICENSE](LICENSE) file.
+
+## Troubleshooting
