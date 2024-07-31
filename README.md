@@ -47,14 +47,14 @@ See the [accompanying blog post on the AWS Serverless Blog](https://aws.amazon.c
 Clone this repository:
 
 ```bash
-git clone https://github.com/aws-samples/serverless-pdf-chat.git
+git clone https://github.com/devenkhatri/serverless-pdf-chat.git
 ```
 
 ### Amazon Bedrock setup
 
 This application can be used with a variety of LLMs via Amazon Bedrock. See [Supported models in Amazon Bedrock](https://docs.aws.amazon.com/bedrock/latest/userguide/what-is-service.html#models-supported) for a complete list.
 
-By default, this application uses **Titan Embeddings G1 - Text** to generate embeddings and **Anthropic's Claude v2** model for responses.
+By default, this application uses **Titan Embeddings G1 - Text** to generate embeddings and **Titan Text Express - v1** model for responses.
 
 > **Important**
 > Before you can use these models with this application, **you must request access in the Amazon Bedrock console**. See the [Model access](https://docs.aws.amazon.com/bedrock/latest/userguide/model-access.html) section of the Bedrock User Guide for detailed instructions.

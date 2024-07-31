@@ -26,8 +26,6 @@ const Document: React.FC = () => {
       {}
     );
     setConversation(conversation);
-    setPrompt("");
-    setMessageStatus("idle");
     setLoading("idle");
   };
 
@@ -94,7 +92,9 @@ const Document: React.FC = () => {
         },
       }
     );
+    setPrompt("");
     fetchData(conversation?.conversationid);
+    setMessageStatus("idle");
   };
 
   return (

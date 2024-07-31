@@ -40,7 +40,10 @@ def lambda_handler(event, context):
         client=bedrock_runtime,
         region_name="us-east-1",
     ), Bedrock(
-        model_id="amazon.titan-text-express-v1", client=bedrock_runtime, region_name="us-east-1"
+        model_id="amazon.titan-text-express-v1", 
+        client=bedrock_runtime,
+        region_name="us-east-1",
+        model_kwargs={"temperature": 1, "maxTokenCount": 700},
     )
     faiss_index = FAISS.load_local("/tmp", embeddings, allow_dangerous_deserialization=True)
 

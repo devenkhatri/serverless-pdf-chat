@@ -13,3 +13,7 @@
         background-color: rgb(76 29 149/0.1) !important;
     }
 }
+
+.amplify-loader circle:last-of-type {
+    stroke: rgb(76 29 149/0.8) !important;
+}
